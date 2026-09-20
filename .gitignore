@@ -2,3 +2,7 @@ __pycache__/
 *.pyc
 .env
 .venv/
+
+# local drafts, not part of the project
+LINKEDIN.md
+POST.txt
