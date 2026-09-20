@@ -133,10 +133,16 @@ cp .env.example .env        # add GROQ_API_KEY; TYPESAFE_API_KEY optional
 ```
 
 ```bash
+streamlit run app.py                 # visual demo - watch each gate fire
 python -m src.cli                    # walk the sample queries
 python -m src.cli "your question"    # ask one
 python -m src.bench                  # Jev gates vs LLM judge
 ```
+
+The Streamlit app is the one to open first. It shows the decision layer rather
+than just the answer: every typed gate, what it decided, its confidence and its
+latency, plus where a query exited. Watching `hey, thanks!` terminate at triage
+with zero LLM calls makes the argument faster than any paragraph.
 
 Everything runs without any key at all — both layers fall back to labelled
 stubs, so the graph is inspectable offline.
@@ -197,6 +203,7 @@ is no prose to parse.
 ## Layout
 
 ```
+app.py           Streamlit demo - surfaces every gate, not just the answer
 src/
   gates.py       the three Jev gates + offline stub      ← the interesting file
   pipeline.py    orchestration and the escalation policy

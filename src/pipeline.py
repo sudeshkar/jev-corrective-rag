@@ -10,7 +10,7 @@
      +-- [Jev] grade x N .......... does this passage ACTUALLY answer it?
      |        `-- all rejected -> widen once -> still none? 0 LLM calls.
      |
-     +-- [Claude] generate ........ the only generative call in the system
+     +-- [LLM] generate ........... the only generative call in the system
      |
      +-- [Jev] verify ............. grounded? on-question? complete?
               `-- calibrated confidence -> AUTO / REVIEW / ESCALATE
