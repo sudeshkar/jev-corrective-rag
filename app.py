@@ -91,9 +91,13 @@ st.write("**Try one:**")
 cols = st.columns(4)
 for i, sample in enumerate(SAMPLES):
     if cols[i % 4].button(sample[:38] + ("..." if len(sample) > 38 else ""), key=f"s{i}"):
+        # Write to the widget's own key before it is instantiated, then rerun.
+        # Passing value= to an existing widget does not override what the user
+        # (or a previous run) left in it.
         st.session_state.question = sample
+        st.rerun()
 
-question = st.text_input("Question", value=st.session_state.question)
+question = st.text_input("Question", key="question")
 
 if st.button("Run", type="primary") or question:
     with st.spinner("Running gates..."):
