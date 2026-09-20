@@ -37,6 +37,12 @@ That is exactly the shape of a RAG decision gate. So all six judgment calls move
 to Jev, and the LLM is left with the one job it is actually needed for — writing
 the sentence.
 
+This is not an LLM replacement, and the repo does not treat it as one. It is a
+filter that holds back the traffic which never needed a generative model, and
+forwards only what does. Three layers: observe, **judge (System 1)**, reason
+(System 2) — the naming is Kahneman's, and it is the blueprint the pipeline
+follows literally.
+
 ```
 question
    │
@@ -99,6 +105,20 @@ Raise `RELEVANCE_CONF_FLOOR` / `VERIFY_CONF_FLOOR` in `src/pipeline.py` to trade
 coverage for precision. With an LLM judge this knob does not exist — you get a
 confident sentence either way.
 
+### Why the confidence number is worth gating on
+
+This is the part that makes the threshold defensible rather than decorative.
+
+RLHF trains a model on answers a human rated confident and helpful. Optimise for
+sounding confident and you get a model that hallucinates convincingly — its
+stated certainty carries little information about whether it is right.
+
+Jev is trained with **RLCD** (Reinforcement Learning from Calibrated Decisions),
+where wrong answers are explicitly punished. The consequence is that ambiguity
+in the input shows up as a *lower probability score* rather than a confident
+fabrication. That is what turns `confidence < 0.60 → human review` into a real
+control, instead of a threshold on a number that means nothing.
+
 ## Honest status
 
 Read this before quoting any number above.
@@ -113,8 +133,10 @@ The Jev integration in `src/gates.py` is written against the documented SDK
 shape and is wired end to end, but has not run against the live API. Without a
 `TYPESAFE_API_KEY` the gates fall back to a keyword heuristic that sleeps
 **300 ms per call** — the pessimistic end of TypeSafe's published 70–500 ms
-range, chosen so a stubbed run *under-sells* the latency case. The benchmark
-prints `PARTIAL` and names the stub whenever this is what ran.
+range, and consistent with a developer-reported 300 ms measured from Chennai
+including transatlantic network latency. Chosen so a stubbed run *under-sells*
+the latency case. The benchmark prints `PARTIAL` and names the stub whenever
+this is what ran.
 
 Add a key and the same command prints `MEASURED` with real figures.
 

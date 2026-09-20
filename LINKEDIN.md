@@ -99,6 +99,107 @@ space you already know.
 
 ---
 
+## Option C — System 1 / System 2 framing (strongest technical angle)
+
+A drone moving fast through dense terrain has to read its sensors, process
+them, and decide — in milliseconds. You cannot put an autoregressive LLM in
+that loop.
+
+Not because it isn't smart enough. Because of how it's built.
+
+An LLM predicts one token at a time. Sequentially. Each word conditioned on
+every word before it. Just to *frame* a response it keeps re-consuming its own
+output — and only when the last token lands do you find out whether you got
+valid JSON or a crashed pipeline.
+
+Psychologists split human thinking in two. System 1 is snap judgment. System 2
+is slow and deliberate, weighing options. An LLM burning seconds token-by-token
+is System 2 — and we've been using it for System 1 work.
+
+TypeSafe AI built Jev as System 1. You give it context plus **the list of
+answers you'll accept**, and it returns one of them with a calibrated
+probability. One parallel pass. No token generation. No output tokens at all,
+so output is billed at zero.
+
+The part I find most interesting isn't the speed — it's the training.
+
+RLHF optimizes for answers a human rated confident and helpful. Optimize for
+sounding confident and you get a model that hallucinates convincingly.
+
+Jev uses RLCD — Reinforcement Learning from Calibrated Decisions. Wrong answers
+are explicitly punished. The consequence: when the data is ambiguous it *lowers
+its probability score* instead of inventing something. That's what makes the
+confidence number trustworthy enough to actually gate on.
+
+So I rebuilt a Corrective RAG pipeline around that idea. Three layers:
+
+→ observe
+→ judgment (System 1) — every decision gate, typed
+→ reasoning (System 2) — the LLM, called once, and often not at all
+
+Same retriever, same generator, same graph. Only the decision layer changed:
+
+• LLM calls per query: 5.38 → 0.75
+• Worst case latency: 19.6s → 3.2s
+
+Below one LLM call per query, because most queries never reach the generative
+model. "hey, thanks!" exits at triage. A request to waive a policy escalates to
+a human before retrieval. An ungrounded answer is suppressed after generation.
+
+The rule the whole thing follows: **never ask a generative model a question
+whose answer space you already know.**
+
+To be clear, and this is the framing that matters — Jev is not an LLM
+replacement. It's a filter that holds back the traffic that never needed a
+generative model, and forwards only what does.
+
+Caveat I'll state plainly: Jev is early access and I don't have a key yet. The
+generation and LLM-judge baseline are live on Groq and genuinely measured; the
+gates are stubbed at 300ms/call, matching a developer-reported measurement from
+Chennai. The benchmark prints PARTIAL and names the stub whenever that's what
+ran.
+
+Code and benchmark harness:
+[link]
+
+#RAG #LLM #AIEngineering #SystemDesign #Python
+
+---
+
+## Reference: concepts worth knowing before you post
+
+Useful if someone asks a sharp question in the comments.
+
+**Autoregressive** — predicts one token at a time, each conditioned on all
+previous ones. Cannot parallelise. This is the latency floor, not an
+implementation detail.
+
+**System 1 / System 2** — from Kahneman's *Thinking, Fast and Slow*. System 1 is
+fast snap judgment; System 2 is slow deliberate reasoning. Jev is explicitly
+built as System 1.
+
+**The three output types**
+- `Choice` — pick one option, up to 255 of them
+- `Score` — a probability or rating against ordered criteria
+- `Noul` — binary, 0 or 1
+
+**RLHF vs RLCD** — RLHF optimizes for human-rated confidence and helpfulness,
+which rewards sounding sure. RLCD (Reinforcement Learning from Calibrated
+Decisions) explicitly punishes wrong answers, so ambiguity shows up as a lower
+probability score rather than a confident fabrication.
+
+**Why "zero hallucination" is structural** — you define the output space; it
+selects from answers you supplied. There is no mechanism for inventing a new one.
+
+**Pricing** — output tokens don't exist, so output is free. Input is $0.042 per
+1M tokens.
+
+**Known limits** — prompt injection concerns have been raised, and it does
+misjudge on some inputs. It is a router in front of an LLM, not a replacement
+for one.
+
+---
+
 ## Notes on posting
 
 - **Lead image:** screenshot the `python -m src.bench` output table. Numbers in
