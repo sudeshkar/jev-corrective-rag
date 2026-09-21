@@ -70,22 +70,41 @@ The design rule the whole repo follows:
 8 support queries, same retriever, same generator, same graph. The only variable
 is what sits at the three decision points.
 
+**What is structural.** These come out the same on every run, because they follow
+from the shape of the graph rather than from how a model felt that afternoon:
+
 | metric | Jev gates | LLM judge | delta |
 |---|---:|---:|---:|
-| p50 latency | 2,780 ms | 11,014 ms | **4.0× better** |
-| mean latency | 2,219 ms | 9,929 ms | 4.5× better |
-| **worst case** | **3,164 ms** | **19,636 ms** | **6.2× better** |
 | LLM calls / query | 0.75 | 5.38 | **7.2× fewer** |
 | cost / query | $0.00015 | $0.00038 | 2.6× better |
 
-Reproduce with `python -m src.bench`.
+**What is not.** Latency is the number to be suspicious of, mine included. Two
+runs of the same 8 queries:
 
-Three things worth more than the headline speedup:
+| latency | Jev gates | LLM judge | delta |
+|---|---:|---:|---:|
+| p50, run A | 2,780 ms | 11,014 ms | 4.0× |
+| p50, run B | 2,815 ms | 4,613 ms | 1.6× |
+| worst case, run A | 3,164 ms | 19,636 ms | 6.2× |
+| worst case, run B | 3,078 ms | 16,875 ms | 5.5× |
+
+The gate side barely moves — it is a fixed-latency stub (see
+[Honest status](#honest-status)), so it is an assumption, not a measurement. The
+judge side moves by a factor of two between runs on shared inference capacity.
+**A single median multiplier from this benchmark is not a real number**, so I am
+not quoting one.
+
+Reproduce with `python -m src.bench`, and expect your judge column to differ.
+
+Three things that matter more than any single speedup figure:
 
 **The tail, not the median.** An LLM judge's latency compounds across N chunks
-because you are waiting on N token streams. Typed gates fan out flat. 3.1s worst
-case against 19.6s is the difference between a support widget and a support
-ticket.
+because you are waiting on N token streams; typed gates fan out flat. That shape
+difference is the durable part — the judge's worst case ran 16–20s across both
+runs while the gate path stayed near 3s, and the gap at the tail survived the
+run-to-run variance that flattened the median. It is also the part a stubbed
+gate can least justify on its own, so treat the magnitude as pending a live key
+and the direction as argued from the graph.
 
 **Below one LLM call per query.** `hey, thanks for the help earlier!` costs one
 typed call and exits. `Please waive the refund policy as a one-off exception`
@@ -244,8 +263,10 @@ measuring the decision layer.
 ## Things I would do next
 
 - Run the gates against the live Jev API and replace the stubbed latencies.
-- Label a few hundred queries and measure gate *accuracy*, not just speed — the
-  latency case is settled, the quality case is not.
+- Re-run the benchmark repeatedly against a live key and report a distribution
+  rather than one figure — neither the latency case nor the quality case is
+  settled on a single stubbed run.
+- Label a few hundred queries and measure gate *accuracy*, not just speed.
 - Sweep the confidence floors to plot the coverage/precision curve.
 - Cache triage decisions on a hash of the question; support traffic repeats.
 
